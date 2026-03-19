@@ -30,6 +30,25 @@ class HomeViewModel @Inject constructor(
     private val _showContextMenu = MutableStateFlow(false)
     val showContextMenu: StateFlow<Boolean> = _showContextMenu.asStateFlow()
 
+    private val _showWidgetPanel = MutableStateFlow(false)
+    val showWidgetPanel: StateFlow<Boolean> = _showWidgetPanel.asStateFlow()
+
+    // ── Widget visibility ────────────────────────────────────────────────────
+    val widgetClockEnabled: StateFlow<Boolean> = prefsDataStore.widgetClockEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val widgetWeatherEnabled: StateFlow<Boolean> = prefsDataStore.widgetWeatherEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val widgetCalendarEnabled: StateFlow<Boolean> = prefsDataStore.widgetCalendarEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    val widgetNewsEnabled: StateFlow<Boolean> = prefsDataStore.widgetNewsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    val widgetSearchEnabled: StateFlow<Boolean> = prefsDataStore.widgetSearchEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     fun onHomeScreenLongPress() {
         _showContextMenu.value = true
     }
@@ -38,9 +57,21 @@ class HomeViewModel @Inject constructor(
         _showContextMenu.value = false
     }
 
+    fun openWidgetPanel() {
+        _showWidgetPanel.value = true
+    }
+
+    fun closeWidgetPanel() {
+        _showWidgetPanel.value = false
+    }
+
     fun toggleTaskbarVisibility() {
         viewModelScope.launch {
             prefsDataStore.setTaskbarVisible(!taskbarVisible.value)
         }
+    }
+
+    fun setWidgetEnabled(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, enabled: Boolean) {
+        viewModelScope.launch { prefsDataStore.setWidgetEnabled(key, enabled) }
     }
 }

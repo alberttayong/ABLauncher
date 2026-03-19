@@ -22,6 +22,16 @@
     <!-- Restore launcher after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Network access for weather API and Google News RSS -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Location for weather widget (GPS auto-detect) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Calendar events for calendar widget -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
     <application
         android:name=".ABLauncherApp"
         android:icon="@mipmap/ic_launcher"

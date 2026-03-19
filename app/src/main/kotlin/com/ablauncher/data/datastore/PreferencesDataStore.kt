@@ -21,13 +21,27 @@ class PreferencesDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
+        // Appearance
         val KEY_THEME = stringPreferencesKey("app_theme")
         val KEY_BLUR_RADIUS = floatPreferencesKey("blur_radius")
         val KEY_PANEL_ALPHA = floatPreferencesKey("panel_alpha")
+        // Taskbar
         val KEY_TASKBAR_VISIBLE = booleanPreferencesKey("taskbar_visible")
         val KEY_TASKBAR_PINNED = stringSetPreferencesKey("taskbar_pinned")
         val KEY_WALLPAPER_URI = stringPreferencesKey("wallpaper_uri")
         val KEY_TASKBAR_PINNED_ORDER = stringPreferencesKey("taskbar_pinned_order")
+        // Widget visibility toggles
+        val KEY_WIDGET_CLOCK_ENABLED = booleanPreferencesKey("widget_clock_enabled")
+        val KEY_WIDGET_WEATHER_ENABLED = booleanPreferencesKey("widget_weather_enabled")
+        val KEY_WIDGET_CALENDAR_ENABLED = booleanPreferencesKey("widget_calendar_enabled")
+        val KEY_WIDGET_NEWS_ENABLED = booleanPreferencesKey("widget_news_enabled")
+        val KEY_WIDGET_SEARCH_ENABLED = booleanPreferencesKey("widget_search_enabled")
+        // Clock settings
+        val KEY_CLOCK_FACE = stringPreferencesKey("clock_face")
+        val KEY_CLOCK_FORMAT = stringPreferencesKey("clock_format")
+        // Weather settings
+        val KEY_WEATHER_UNIT = stringPreferencesKey("weather_unit")
+        val KEY_WEATHER_MANUAL_CITY = stringPreferencesKey("weather_manual_city")
     }
 
     val themeConfig: Flow<ThemeConfig> = context.dataStore.data
@@ -87,5 +101,64 @@ class PreferencesDataStore @Inject constructor(
             if (uri != null) prefs[KEY_WALLPAPER_URI] = uri
             else prefs.remove(KEY_WALLPAPER_URI)
         }
+    }
+
+    // ── Widget visibility ────────────────────────────────────────────────────
+    val widgetClockEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WIDGET_CLOCK_ENABLED] ?: true }
+
+    val widgetWeatherEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WIDGET_WEATHER_ENABLED] ?: true }
+
+    val widgetCalendarEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WIDGET_CALENDAR_ENABLED] ?: true }
+
+    val widgetNewsEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WIDGET_NEWS_ENABLED] ?: false }
+
+    val widgetSearchEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WIDGET_SEARCH_ENABLED] ?: true }
+
+    // ── Clock settings ───────────────────────────────────────────────────────
+    val clockFace: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_CLOCK_FACE] ?: "DIGITAL_FULL" }
+
+    val clockFormat: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_CLOCK_FORMAT] ?: "HOUR_12" }
+
+    // ── Weather settings ─────────────────────────────────────────────────────
+    val weatherUnit: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WEATHER_UNIT] ?: "CELSIUS" }
+
+    val weatherManualCity: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WEATHER_MANUAL_CITY] ?: "" }
+
+    suspend fun setWidgetEnabled(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[key] = enabled }
+    }
+
+    suspend fun setClockFace(face: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_CLOCK_FACE] = face }
+    }
+
+    suspend fun setClockFormat(format: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_CLOCK_FORMAT] = format }
+    }
+
+    suspend fun setWeatherUnit(unit: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_WEATHER_UNIT] = unit }
+    }
+
+    suspend fun setWeatherManualCity(city: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_WEATHER_MANUAL_CITY] = city }
     }
 }

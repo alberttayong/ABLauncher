@@ -60,6 +60,10 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.accompanist.systemuicontroller)
+    // Accompanist permissions: runtime requests for location + calendar
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+    // OkHttp: network requests for weather API + Google News RSS
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     debugImplementation(libs.compose.ui.tooling)
 }
