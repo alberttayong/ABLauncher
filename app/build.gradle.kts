@@ -44,6 +44,8 @@ dependencies {
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    // Extended icons: Apps, PushPin, Widgets, Palette, GridView, ExpandLess/More, etc.
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.compose.animation)
     implementation(libs.compose.foundation)
     implementation(libs.compose.runtime)
