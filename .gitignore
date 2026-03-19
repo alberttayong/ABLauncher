@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+**/build/
+*.apk
+*.aab
+*.ap_
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+.externalNativeBuild/
+.cxx/
+
+# Kotlin
+*.class
+*.kt.bak
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Keys / secrets
+*.keystore
+*.jks
+keystore.properties
+
+# Gradle wrapper (jar is large; properties is committed)
+gradle/wrapper/gradle-wrapper.jar

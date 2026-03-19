@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- AB initials logo -->
+    <path
+        android:fillColor="#00D4FF"
+        android:pathData="M30,72 L30,36 L48,36 C55,36 60,41 60,48 C60,52 58,55 55,57 C59,59 62,63 62,68 C62,75 57,80 49,80 L30,80 Z M40,52 L46,52 C48.5,52 50,50.5 50,48 C50,45.5 48.5,44 46,44 L40,44 Z M40,72 L48,72 C51,72 52.5,70 52.5,67.5 C52.5,65 51,63 48,63 L40,63 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M65,80 L77,36 L87,36 L99,80 L89,80 L87,72 L77,72 L75,80 Z M79,64 L85,64 L82,50 Z" />
+</vector>

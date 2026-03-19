@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ABLauncher</string>
+    <string name="app_tray_label">App Tray</string>
+    <string name="settings_label">Settings</string>
+    <string name="wallpaper_label">Wallpaper</string>
+    <string name="widgets_label">Widgets</string>
+    <string name="more_windows_label">More Windows</string>
+    <string name="wallpapers_styles_label">Wallpapers &amp; Styles</string>
+    <string name="search_apps_hint">Search apps…</string>
+    <string name="taskbar_label">Taskbar</string>
+    <string name="pin_to_taskbar">Pin to Taskbar</string>
+    <string name="remove_from_taskbar">Remove from Taskbar</string>
+    <string name="app_info">App Info</string>
+    <string name="open_app">Open</string>
+    <string name="usage_access_title">Usage Access</string>
+    <string name="usage_access_desc">Grant usage access so ABLauncher can show your recently used apps in the taskbar.</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="permission_granted">Permission Granted</string>
+    <string name="theme_glass">Glass</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_neon">Neon</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_amoled">AMOLED</string>
+    <string name="blur_radius_label">Blur Radius</string>
+    <string name="panel_opacity_label">Panel Opacity</string>
+    <string name="built_in_wallpapers">Built-in</string>
+    <string name="gallery_wallpapers">Gallery</string>
+    <string name="collapse_taskbar">Collapse taskbar</string>
+    <string name="expand_taskbar">Expand taskbar</string>
+    <string name="about_label">About</string>
+    <string name="version_label">Version</string>
+</resources>
