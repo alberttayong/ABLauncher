@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -97,7 +98,7 @@ fun HomeCanvas(
             .fillMaxSize()
             // Tap on blank canvas deselects
             .pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectTapGestures { onSelect(null) }
+                detectTapGestures { onSelect(null) }
             }
     ) {
         val canvasW = constraints.maxWidth.toFloat()
