@@ -110,6 +110,13 @@ fun AppTrayScreen(
             },
             onPinToTaskbar = { viewModel.pinToTaskbar(app.packageName) },
             onUnpinFromTaskbar = { viewModel.unpinFromTaskbar(app.packageName) },
+            onAddToHome = {
+                navController.previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("add_to_home_pkg", app.packageName)
+                viewModel.dismissAppOptions()
+                navController.popBackStack()
+            },
             onAppInfo = {
                 viewModel.dismissAppOptions()
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -131,6 +138,7 @@ private fun AppOptionsSheet(
     onOpen: () -> Unit,
     onPinToTaskbar: () -> Unit,
     onUnpinFromTaskbar: () -> Unit,
+    onAddToHome: () -> Unit,
     onAppInfo: () -> Unit
 ) {
     ModalBottomSheet(
@@ -162,6 +170,7 @@ private fun AppOptionsSheet(
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             Spacer(Modifier.height(8.dp))
             OptionsAction(Icons.Default.OpenInNew, stringResource(R.string.open_app), onOpen)
+            OptionsAction(Icons.Default.AddHome, "Add to Home Screen", onAddToHome)
             OptionsAction(Icons.Default.PushPin, stringResource(R.string.pin_to_taskbar), onPinToTaskbar)
             OptionsAction(Icons.Default.Info, stringResource(R.string.app_info), onAppInfo)
         }

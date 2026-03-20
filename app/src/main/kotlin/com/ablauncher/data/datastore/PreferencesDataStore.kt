@@ -42,6 +42,8 @@ class PreferencesDataStore @Inject constructor(
         // Weather settings
         val KEY_WEATHER_UNIT = stringPreferencesKey("weather_unit")
         val KEY_WEATHER_MANUAL_CITY = stringPreferencesKey("weather_manual_city")
+        // Home canvas layout
+        val KEY_HOME_ITEMS = stringPreferencesKey("home_items")
     }
 
     val themeConfig: Flow<ThemeConfig> = context.dataStore.data
@@ -160,5 +162,14 @@ class PreferencesDataStore @Inject constructor(
 
     suspend fun setWeatherManualCity(city: String) {
         context.dataStore.edit { prefs -> prefs[KEY_WEATHER_MANUAL_CITY] = city }
+    }
+
+    // ── Home canvas layout ────────────────────────────────────────────────────
+    val homeItemsJson: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_HOME_ITEMS] ?: "" }
+
+    suspend fun setHomeItemsJson(json: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_HOME_ITEMS] = json }
     }
 }
