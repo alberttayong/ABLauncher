@@ -88,6 +88,7 @@ fun HomeScreen(
             isVisible = taskbarVisible,
             onToggleVisibility = { viewModel.toggleTaskbarVisibility() },
             onAppTrayOpen = { navController.navigate("apptray") },
+            onSettingsOpen = { navController.navigate("settings") },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ fun TaskbarSection(
     isVisible: Boolean,
     onToggleVisibility: () -> Unit,
     onAppTrayOpen: () -> Unit,
+    onSettingsOpen: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TaskbarViewModel = hiltViewModel()
 ) {
@@ -107,6 +109,20 @@ fun TaskbarSection(
                                 )
                             }
                         }
+                    }
+
+                    // Settings button (right side)
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onSettingsOpen,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             }

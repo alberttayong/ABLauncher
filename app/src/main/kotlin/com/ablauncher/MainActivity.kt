@@ -7,7 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -15,7 +17,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.ablauncher.data.model.ThemeConfig
 import com.ablauncher.ui.apptray.AppTrayScreen
 import com.ablauncher.ui.home.HomeScreen
 import com.ablauncher.ui.settings.SettingsScreen
@@ -45,6 +46,16 @@ class MainActivity : ComponentActivity() {
             ABLauncherTheme(themeConfig = themeConfig) {
                 val navController = rememberNavController()
 
+                // Derive animation durations from the persisted speed multiplier.
+                // Higher speed → shorter duration. Clamped so animations never
+                // become unrecognisably fast or slow.
+                val slideDuration by remember(themeConfig.animSpeed) {
+                    derivedStateOf { (300f / themeConfig.animSpeed).toInt().coerceIn(60, 1200) }
+                }
+                val fadeDuration by remember(themeConfig.animSpeed) {
+                    derivedStateOf { (200f / themeConfig.animSpeed).toInt().coerceIn(40, 800) }
+                }
+
                 NavHost(
                     navController = navController,
                     startDestination = "home",
@@ -60,15 +71,15 @@ class MainActivity : ComponentActivity() {
                         route = "apptray",
                         enterTransition = {
                             slideInVertically(
-                                animationSpec = tween(300),
+                                animationSpec = tween(slideDuration),
                                 initialOffsetY = { it }
-                            ) + fadeIn(tween(200))
+                            ) + fadeIn(tween(fadeDuration))
                         },
                         exitTransition = {
                             slideOutVertically(
-                                animationSpec = tween(300),
+                                animationSpec = tween(slideDuration),
                                 targetOffsetY = { it }
-                            ) + fadeOut(tween(200))
+                            ) + fadeOut(tween(fadeDuration))
                         }
                     ) {
                         AppTrayScreen(navController = navController)
@@ -79,15 +90,15 @@ class MainActivity : ComponentActivity() {
                         route = "settings",
                         enterTransition = {
                             slideInHorizontally(
-                                animationSpec = tween(300),
+                                animationSpec = tween(slideDuration),
                                 initialOffsetX = { it }
-                            ) + fadeIn(tween(200))
+                            ) + fadeIn(tween(fadeDuration))
                         },
                         exitTransition = {
                             slideOutHorizontally(
-                                animationSpec = tween(300),
+                                animationSpec = tween(slideDuration),
                                 targetOffsetX = { it }
-                            ) + fadeOut(tween(200))
+                            ) + fadeOut(tween(fadeDuration))
                         }
                     ) {
                         SettingsScreen(navController = navController)
@@ -98,15 +109,15 @@ class MainActivity : ComponentActivity() {
                         route = "wallpaper",
                         enterTransition = {
                             slideInVertically(
-                                animationSpec = tween(300),
+                                animationSpec = tween(slideDuration),
                                 initialOffsetY = { it }
-                            ) + fadeIn(tween(200))
+                            ) + fadeIn(tween(fadeDuration))
                         },
                         exitTransition = {
                             slideOutVertically(
-                                animationSpec = tween(300),
+                                animationSpec = tween(slideDuration),
                                 targetOffsetY = { it }
-                            ) + fadeOut(tween(200))
+                            ) + fadeOut(tween(fadeDuration))
                         }
                     ) {
                         WallpaperPickerScreen(navController = navController)

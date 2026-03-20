@@ -44,6 +44,8 @@ class PreferencesDataStore @Inject constructor(
         val KEY_WEATHER_MANUAL_CITY = stringPreferencesKey("weather_manual_city")
         // Home canvas layout
         val KEY_HOME_ITEMS = stringPreferencesKey("home_items")
+        // Animation speed
+        val KEY_ANIM_SPEED = floatPreferencesKey("anim_speed")
     }
 
     val themeConfig: Flow<ThemeConfig> = context.dataStore.data
@@ -54,7 +56,8 @@ class PreferencesDataStore @Inject constructor(
                     runCatching { AppTheme.valueOf(it) }.getOrDefault(AppTheme.GLASS)
                 } ?: AppTheme.GLASS,
                 blurRadius = prefs[KEY_BLUR_RADIUS] ?: 20f,
-                panelAlpha = prefs[KEY_PANEL_ALPHA] ?: 0.35f
+                panelAlpha = prefs[KEY_PANEL_ALPHA] ?: 0.35f,
+                animSpeed = prefs[KEY_ANIM_SPEED] ?: 1.0f
             )
         }
 
@@ -162,6 +165,10 @@ class PreferencesDataStore @Inject constructor(
 
     suspend fun setWeatherManualCity(city: String) {
         context.dataStore.edit { prefs -> prefs[KEY_WEATHER_MANUAL_CITY] = city }
+    }
+
+    suspend fun setAnimSpeed(speed: Float) {
+        context.dataStore.edit { prefs -> prefs[KEY_ANIM_SPEED] = speed }
     }
 
     // ── Home canvas layout ────────────────────────────────────────────────────
