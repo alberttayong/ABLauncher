@@ -1,5 +1,8 @@
 package com.ablauncher.ui.settings
 
+import android.content.ComponentName
+import android.content.Context
+import android.provider.Settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ablauncher.data.datastore.PreferencesDataStore
@@ -11,13 +14,16 @@ import com.ablauncher.data.model.ThemeConfig
 import com.ablauncher.data.model.WidgetType
 import com.ablauncher.data.repository.HomeItemRepository
 import com.ablauncher.data.repository.RecentAppsRepository
+import com.ablauncher.service.ABNotificationListener
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val prefsDataStore: PreferencesDataStore,
     private val recentAppsRepository: RecentAppsRepository,
     private val homeItemRepository: HomeItemRepository
@@ -29,7 +35,10 @@ class SettingsViewModel @Inject constructor(
     private val _hasUsagePermission = MutableStateFlow(false)
     val hasUsagePermission: StateFlow<Boolean> = _hasUsagePermission.asStateFlow()
 
-    // ── Widget enabled states (derived from canvas items) ─────────────────────
+    private val _hasNotificationListenerPermission = MutableStateFlow(false)
+    val hasNotificationListenerPermission: StateFlow<Boolean> = _hasNotificationListenerPermission.asStateFlow()
+
+    // ── Widget enabled states (derived from ALL canvas items) ─────────────────
     private val homeItems: StateFlow<List<HomeItem>> = homeItemRepository.homeItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -53,6 +62,10 @@ class SettingsViewModel @Inject constructor(
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.SEARCH } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    val widgetMediaPlayerEnabled: StateFlow<Boolean> = homeItems
+        .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.MEDIA_PLAYER } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     // ── Clock settings ────────────────────────────────────────────────────────
     val clockFace: StateFlow<ClockFace> = prefsDataStore.clockFace
         .map { runCatching { ClockFace.valueOf(it) }.getOrDefault(ClockFace.DIGITAL_FULL) }
@@ -69,8 +82,27 @@ class SettingsViewModel @Inject constructor(
     val manualCity: StateFlow<String> = prefsDataStore.weatherManualCity
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
+    // ── App tray settings ─────────────────────────────────────────────────────
+    val appTrayColumns: StateFlow<Int> = prefsDataStore.appTrayColumns
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 4)
+
+    val appTrayIconDp: StateFlow<Int> = prefsDataStore.appTrayIconDp
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 56)
+
+    val appTrayStyle: StateFlow<String> = prefsDataStore.appTrayStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "FROSTED")
+
+    val appTrayAnim: StateFlow<String> = prefsDataStore.appTrayAnim
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "SLIDE_UP")
+
+    // ── Home pages ────────────────────────────────────────────────────────────
+    val homePageCount: StateFlow<Int> = homeItemRepository.homePages
+        .map { it.size.coerceAtLeast(1) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 1)
+
     init {
         checkUsagePermission()
+        checkNotificationListenerPermission()
     }
 
     fun checkUsagePermission() {
@@ -79,6 +111,15 @@ class SettingsViewModel @Inject constructor(
 
     fun requestUsagePermission() {
         recentAppsRepository.requestUsagePermission()
+    }
+
+    fun checkNotificationListenerPermission() {
+        val flat = Settings.Secure.getString(
+            context.contentResolver,
+            "enabled_notification_listeners"
+        ) ?: ""
+        val cn = ComponentName(context, ABNotificationListener::class.java).flattenToShortString()
+        _hasNotificationListenerPermission.value = flat.contains(cn)
     }
 
     // ── Appearance ────────────────────────────────────────────────────────────
@@ -105,8 +146,10 @@ class SettingsViewModel @Inject constructor(
 
     private fun addWidget(type: WidgetType) {
         viewModelScope.launch {
-            val current = homeItems.value
-            if (current.any { it is HomeItem.Widget && it.widgetType == type }) return@launch
+            val pages = homeItemRepository.homePages.first().toMutableList()
+            if (pages.isEmpty()) return@launch
+            // Check all pages for existing widget
+            if (pages.flatten().any { it is HomeItem.Widget && it.widgetType == type }) return@launch
             val newItem = HomeItem.Widget(
                 widgetType = type,
                 xFrac = type.defaultXFrac,
@@ -114,15 +157,18 @@ class SettingsViewModel @Inject constructor(
                 widthFrac = type.defaultWidthFrac,
                 heightFrac = type.defaultHeightFrac
             )
-            homeItemRepository.save(current + newItem)
+            // Add to page 0
+            pages[0] = pages[0] + newItem
+            homeItemRepository.savePages(pages)
         }
     }
 
     private fun removeWidget(type: WidgetType) {
         viewModelScope.launch {
-            homeItemRepository.save(
-                homeItems.value.filter { !(it is HomeItem.Widget && it.widgetType == type) }
-            )
+            val pages = homeItemRepository.homePages.first().map { page ->
+                page.filter { !(it is HomeItem.Widget && it.widgetType == type) }
+            }
+            homeItemRepository.savePages(pages)
         }
     }
 
@@ -141,5 +187,40 @@ class SettingsViewModel @Inject constructor(
 
     fun setManualCity(city: String) {
         viewModelScope.launch { prefsDataStore.setWeatherManualCity(city) }
+    }
+
+    // ── App tray settings ─────────────────────────────────────────────────────
+    fun setAppTrayColumns(columns: Int) {
+        viewModelScope.launch { prefsDataStore.setAppTrayColumns(columns) }
+    }
+
+    fun setAppTrayIconDp(dp: Int) {
+        viewModelScope.launch { prefsDataStore.setAppTrayIconDp(dp) }
+    }
+
+    fun setAppTrayStyle(style: String) {
+        viewModelScope.launch { prefsDataStore.setAppTrayStyle(style) }
+    }
+
+    fun setAppTrayAnim(anim: String) {
+        viewModelScope.launch { prefsDataStore.setAppTrayAnim(anim) }
+    }
+
+    // ── Home pages ────────────────────────────────────────────────────────────
+    fun addPage() {
+        viewModelScope.launch {
+            val pages = homeItemRepository.homePages.first().toMutableList()
+            pages.add(emptyList())
+            homeItemRepository.savePages(pages)
+        }
+    }
+
+    fun removePage(idx: Int) {
+        viewModelScope.launch {
+            val pages = homeItemRepository.homePages.first().toMutableList()
+            if (pages.size <= 1) return@launch
+            pages.removeAt(idx)
+            homeItemRepository.savePages(pages)
+        }
     }
 }

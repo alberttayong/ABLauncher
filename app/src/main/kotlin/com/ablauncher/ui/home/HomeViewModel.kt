@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,28 +41,45 @@ class HomeViewModel @Inject constructor(
     val wallpaperUri: StateFlow<String?> = prefsDataStore.wallpaperUri
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    // ── Home canvas items ─────────────────────────────────────────────────────
-    val homeItems: StateFlow<List<HomeItem>> = homeItemRepository.homeItems
+    val wallpaperDim: StateFlow<Float> = prefsDataStore.wallpaperDim
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0f)
+
+    val wallpaperBlur: StateFlow<Float> = prefsDataStore.wallpaperBlur
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0f)
+
+    // ── Multi-page support ────────────────────────────────────────────────────
+    val homePages: StateFlow<List<List<HomeItem>>> = homeItemRepository.homePages
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    // ── Widget enabled state (derived from canvas items) ──────────────────────
-    val widgetClockEnabled: StateFlow<Boolean> = homeItems
+    val currentPageIndex = MutableStateFlow(0)
+
+    // Current page items (for HomeCanvas display)
+    val homeItems: StateFlow<List<HomeItem>> = combine(homePages, currentPageIndex) { pages, idx ->
+        pages.getOrNull(idx) ?: emptyList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // All items across all pages (for widget-enabled state checks)
+    private val allHomeItems: StateFlow<List<HomeItem>> = homeItemRepository.homeItems
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // ── Widget enabled state (derived from ALL pages) ─────────────────────────
+    val widgetClockEnabled: StateFlow<Boolean> = allHomeItems
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.CLOCK } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    val widgetWeatherEnabled: StateFlow<Boolean> = homeItems
+    val widgetWeatherEnabled: StateFlow<Boolean> = allHomeItems
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.WEATHER } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    val widgetCalendarEnabled: StateFlow<Boolean> = homeItems
+    val widgetCalendarEnabled: StateFlow<Boolean> = allHomeItems
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.CALENDAR } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    val widgetNewsEnabled: StateFlow<Boolean> = homeItems
+    val widgetNewsEnabled: StateFlow<Boolean> = allHomeItems
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.NEWS } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    val widgetSearchEnabled: StateFlow<Boolean> = homeItems
+    val widgetSearchEnabled: StateFlow<Boolean> = allHomeItems
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.SEARCH } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
@@ -98,45 +116,86 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // ── Page management ───────────────────────────────────────────────────────
+    fun setCurrentPage(idx: Int) {
+        currentPageIndex.value = idx.coerceIn(0, (homePages.value.size - 1).coerceAtLeast(0))
+    }
+
+    fun addPage() {
+        viewModelScope.launch {
+            val pages = homePages.value.toMutableList()
+            pages.add(emptyList())
+            homeItemRepository.savePages(pages)
+            currentPageIndex.value = pages.size - 1
+        }
+    }
+
+    fun removePage(idx: Int) {
+        viewModelScope.launch {
+            val pages = homePages.value.toMutableList()
+            if (pages.size <= 1) return@launch
+            pages.removeAt(idx)
+            homeItemRepository.savePages(pages)
+            if (currentPageIndex.value >= pages.size) {
+                currentPageIndex.value = pages.size - 1
+            }
+        }
+    }
+
     // ── Canvas item mutations ─────────────────────────────────────────────────
+    /** Atomically transform the current page and persist. */
+    private suspend fun modifyCurrentPage(transform: (List<HomeItem>) -> List<HomeItem>) {
+        val pages = homePages.value.toMutableList()
+        if (pages.isEmpty()) return
+        val idx = currentPageIndex.value.coerceIn(0, pages.size - 1)
+        pages[idx] = transform(pages[idx])
+        homeItemRepository.savePages(pages)
+    }
+
     fun moveItem(id: String, xFrac: Float, yFrac: Float) {
         viewModelScope.launch {
-            val current = homeItems.value.toMutableList()
-            val idx = current.indexOfFirst { it.id == id }
-            if (idx == -1) return@launch
-            current[idx] = when (val item = current[idx]) {
-                is HomeItem.Widget -> item.copy(
-                    xFrac = xFrac.coerceIn(0f, 0.98f),
-                    yFrac = yFrac.coerceIn(0f, 0.98f)
-                )
-                is HomeItem.AppShortcut -> item.copy(
-                    xFrac = xFrac.coerceIn(0f, 0.98f),
-                    yFrac = yFrac.coerceIn(0f, 0.98f)
-                )
+            modifyCurrentPage { page ->
+                page.toMutableList().also { list ->
+                    val idx = list.indexOfFirst { it.id == id }
+                    if (idx != -1) {
+                        list[idx] = when (val item = list[idx]) {
+                            is HomeItem.Widget -> item.copy(
+                                xFrac = xFrac.coerceIn(0f, 0.98f),
+                                yFrac = yFrac.coerceIn(0f, 0.98f)
+                            )
+                            is HomeItem.AppShortcut -> item.copy(
+                                xFrac = xFrac.coerceIn(0f, 0.98f),
+                                yFrac = yFrac.coerceIn(0f, 0.98f)
+                            )
+                        }
+                    }
+                }
             }
-            homeItemRepository.save(current)
         }
     }
 
     fun resizeItem(id: String, widthFrac: Float, heightFrac: Float) {
         viewModelScope.launch {
-            val current = homeItems.value.toMutableList()
-            val idx = current.indexOfFirst { it.id == id }
-            if (idx == -1) return@launch
-            val item = current[idx]
-            if (item is HomeItem.Widget) {
-                current[idx] = item.copy(
-                    widthFrac = widthFrac.coerceIn(0.10f, 1f),
-                    heightFrac = heightFrac.coerceIn(0.08f, 1f)
-                )
-                homeItemRepository.save(current)
+            modifyCurrentPage { page ->
+                page.toMutableList().also { list ->
+                    val idx = list.indexOfFirst { it.id == id }
+                    if (idx != -1) {
+                        val item = list[idx]
+                        if (item is HomeItem.Widget) {
+                            list[idx] = item.copy(
+                                widthFrac = widthFrac.coerceIn(0.10f, 1f),
+                                heightFrac = heightFrac.coerceIn(0.08f, 1f)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 
     fun removeItem(id: String) {
         viewModelScope.launch {
-            homeItemRepository.save(homeItems.value.filter { it.id != id })
+            modifyCurrentPage { page -> page.filter { it.id != id } }
         }
     }
 
@@ -147,10 +206,7 @@ class HomeViewModel @Inject constructor(
 
     private fun addWidget(type: WidgetType) {
         viewModelScope.launch {
-            val existing = homeItems.value.any {
-                it is HomeItem.Widget && it.widgetType == type
-            }
-            if (existing) return@launch
+            if (allHomeItems.value.any { it is HomeItem.Widget && it.widgetType == type }) return@launch
             val newItem = HomeItem.Widget(
                 widgetType = type,
                 xFrac = type.defaultXFrac,
@@ -158,25 +214,24 @@ class HomeViewModel @Inject constructor(
                 widthFrac = type.defaultWidthFrac,
                 heightFrac = type.defaultHeightFrac
             )
-            homeItemRepository.save(homeItems.value + newItem)
+            modifyCurrentPage { it + newItem }
         }
     }
 
     private fun removeWidget(type: WidgetType) {
         viewModelScope.launch {
-            homeItemRepository.save(
-                homeItems.value.filter { !(it is HomeItem.Widget && it.widgetType == type) }
-            )
+            // Remove from ALL pages
+            val pages = homePages.value.map { page ->
+                page.filter { !(it is HomeItem.Widget && it.widgetType == type) }
+            }
+            homeItemRepository.savePages(pages)
         }
     }
 
     // ── App shortcut ──────────────────────────────────────────────────────────
     fun addAppShortcut(packageName: String) {
         viewModelScope.launch {
-            val alreadyAdded = homeItems.value.any {
-                it is HomeItem.AppShortcut && it.packageName == packageName
-            }
-            if (alreadyAdded) return@launch
+            if (allHomeItems.value.any { it is HomeItem.AppShortcut && it.packageName == packageName }) return@launch
             val label = appRepository.apps.value
                 .find { it.packageName == packageName }?.appName ?: packageName
             val newItem = HomeItem.AppShortcut(
@@ -185,7 +240,7 @@ class HomeViewModel @Inject constructor(
                 xFrac = 0.40f + (Math.random() * 0.15f - 0.07f).toFloat(),
                 yFrac = 0.35f + (Math.random() * 0.15f - 0.07f).toFloat()
             )
-            homeItemRepository.save(homeItems.value + newItem)
+            modifyCurrentPage { it + newItem }
         }
     }
 
@@ -195,13 +250,16 @@ class HomeViewModel @Inject constructor(
 
     fun saveIconConfig(id: String, config: IconConfig) {
         viewModelScope.launch {
-            val current = homeItems.value.toMutableList()
-            val idx = current.indexOfFirst { it.id == id }
-            if (idx == -1) return@launch
-            val item = current[idx]
-            if (item is HomeItem.AppShortcut) {
-                current[idx] = item.copy(iconConfig = config)
-                homeItemRepository.save(current)
+            modifyCurrentPage { page ->
+                page.toMutableList().also { list ->
+                    val idx = list.indexOfFirst { it.id == id }
+                    if (idx != -1) {
+                        val item = list[idx]
+                        if (item is HomeItem.AppShortcut) {
+                            list[idx] = item.copy(iconConfig = config)
+                        }
+                    }
+                }
             }
         }
     }
@@ -209,12 +267,12 @@ class HomeViewModel @Inject constructor(
     // ── Uninstall ─────────────────────────────────────────────────────────────
     fun uninstallApp(packageName: String) {
         viewModelScope.launch {
-            // Remove from canvas immediately
-            homeItemRepository.save(
-                homeItems.value.filter { !(it is HomeItem.AppShortcut && it.packageName == packageName) }
-            )
+            // Remove from ALL pages
+            val pages = homePages.value.map { page ->
+                page.filter { !(it is HomeItem.AppShortcut && it.packageName == packageName) }
+            }
+            homeItemRepository.savePages(pages)
         }
-        // Launch system uninstall dialog
         val intent = Intent(Intent.ACTION_DELETE).apply {
             data = Uri.parse("package:$packageName")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -224,7 +282,6 @@ class HomeViewModel @Inject constructor(
 
     // ── Legacy compat (used by WidgetPanelSheet) ──────────────────────────────
     fun setWidgetEnabled(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, enabled: Boolean) {
-        // Map old DataStore keys to new WidgetType toggles
         val type = when (key) {
             PreferencesDataStore.KEY_WIDGET_CLOCK_ENABLED -> WidgetType.CLOCK
             PreferencesDataStore.KEY_WIDGET_WEATHER_ENABLED -> WidgetType.WEATHER

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ablauncher.data.datastore.PreferencesDataStore
 import com.ablauncher.data.model.AppInfo
 import com.ablauncher.data.repository.AppRepository
 import com.ablauncher.domain.usecase.GetInstalledAppsUseCase
@@ -19,7 +20,8 @@ class AppTrayViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val getInstalledAppsUseCase: GetInstalledAppsUseCase,
     private val updateTaskbarUseCase: UpdateTaskbarUseCase,
-    private val appRepository: AppRepository
+    private val appRepository: AppRepository,
+    private val prefsDataStore: PreferencesDataStore
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -39,6 +41,17 @@ class AppTrayViewModel @Inject constructor(
     private val _showAppOptions = MutableStateFlow(false)
     val showAppOptions: StateFlow<Boolean> = _showAppOptions.asStateFlow()
 
+    // ── App tray appearance ───────────────────────────────────────────────────
+    val appTrayColumns: StateFlow<Int> = prefsDataStore.appTrayColumns
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 4)
+
+    val appTrayIconDp: StateFlow<Int> = prefsDataStore.appTrayIconDp
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 56)
+
+    val appTrayStyle: StateFlow<String> = prefsDataStore.appTrayStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "FROSTED")
+
+    // ── Search ────────────────────────────────────────────────────────────────
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
     }

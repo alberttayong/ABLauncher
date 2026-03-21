@@ -336,5 +336,6 @@ private fun WidgetItemContent(
         WidgetType.CALENDAR -> CalendarWidget(modifier = Modifier.fillMaxSize())
         WidgetType.NEWS -> NewsWidget(modifier = Modifier.fillMaxSize())
         WidgetType.SEARCH -> SearchBarWidget(modifier = Modifier.fillMaxSize())
+        WidgetType.MEDIA_PLAYER -> com.ablauncher.ui.widgets.MediaPlayerWidget(modifier = Modifier.fillMaxSize())
     }
 }

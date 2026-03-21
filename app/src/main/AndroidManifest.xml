@@ -32,6 +32,10 @@
     <!-- Calendar events for calendar widget -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- Read notification metadata for media player widget -->
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+        tools:ignore="ProtectedPermissions" />
+
     <application
         android:name=".ABLauncherApp"
         android:icon="@mipmap/ic_launcher"
@@ -70,6 +74,16 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Notification listener service for media player widget -->
+        <service
+            android:name=".service.ABNotificationListener"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <!-- FileProvider for sharing wallpaper URIs safely -->
         <provider

@@ -42,10 +42,20 @@ class PreferencesDataStore @Inject constructor(
         // Weather settings
         val KEY_WEATHER_UNIT = stringPreferencesKey("weather_unit")
         val KEY_WEATHER_MANUAL_CITY = stringPreferencesKey("weather_manual_city")
-        // Home canvas layout
+        // Home canvas layout (legacy single-page)
         val KEY_HOME_ITEMS = stringPreferencesKey("home_items")
+        // Home canvas multi-page layout
+        val KEY_HOME_PAGES = stringPreferencesKey("home_pages")
         // Animation speed
         val KEY_ANIM_SPEED = floatPreferencesKey("anim_speed")
+        // Wallpaper adjustments
+        val KEY_WALLPAPER_DIM = floatPreferencesKey("wallpaper_dim")      // 0..0.8 darkness overlay
+        val KEY_WALLPAPER_BLUR = floatPreferencesKey("wallpaper_blur")    // 0..1 blur intensity
+        // App tray customization
+        val KEY_APP_TRAY_COLUMNS = intPreferencesKey("app_tray_columns")  // 3..6
+        val KEY_APP_TRAY_ICON_DP = intPreferencesKey("app_tray_icon_dp")  // 40/56/72
+        val KEY_APP_TRAY_STYLE = stringPreferencesKey("app_tray_style")   // FROSTED/DARK/LIGHT/TRANSPARENT
+        val KEY_APP_TRAY_ANIM = stringPreferencesKey("app_tray_anim")     // SLIDE_UP/FADE/SCALE
     }
 
     val themeConfig: Flow<ThemeConfig> = context.dataStore.data
@@ -171,12 +181,71 @@ class PreferencesDataStore @Inject constructor(
         context.dataStore.edit { prefs -> prefs[KEY_ANIM_SPEED] = speed }
     }
 
-    // ── Home canvas layout ────────────────────────────────────────────────────
+    // ── Home canvas layout (legacy single page) ───────────────────────────────
     val homeItemsJson: Flow<String> = context.dataStore.data
         .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
         .map { prefs -> prefs[KEY_HOME_ITEMS] ?: "" }
 
     suspend fun setHomeItemsJson(json: String) {
         context.dataStore.edit { prefs -> prefs[KEY_HOME_ITEMS] = json }
+    }
+
+    // ── Home canvas multi-page layout ─────────────────────────────────────────
+    val homePagesJson: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_HOME_PAGES] ?: "" }
+
+    suspend fun setHomePagesJson(json: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_HOME_PAGES] = json }
+    }
+
+    // ── Wallpaper adjustments ─────────────────────────────────────────────────
+    val wallpaperDim: Flow<Float> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WALLPAPER_DIM] ?: 0f }
+
+    val wallpaperBlur: Flow<Float> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_WALLPAPER_BLUR] ?: 0f }
+
+    suspend fun setWallpaperDim(dim: Float) {
+        context.dataStore.edit { prefs -> prefs[KEY_WALLPAPER_DIM] = dim }
+    }
+
+    suspend fun setWallpaperBlur(blur: Float) {
+        context.dataStore.edit { prefs -> prefs[KEY_WALLPAPER_BLUR] = blur }
+    }
+
+    // ── App tray customization ────────────────────────────────────────────────
+    val appTrayColumns: Flow<Int> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_APP_TRAY_COLUMNS] ?: 4 }
+
+    val appTrayIconDp: Flow<Int> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_APP_TRAY_ICON_DP] ?: 56 }
+
+    val appTrayStyle: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_APP_TRAY_STYLE] ?: "FROSTED" }
+
+    val appTrayAnim: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_APP_TRAY_ANIM] ?: "SLIDE_UP" }
+
+    suspend fun setAppTrayColumns(columns: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_APP_TRAY_COLUMNS] = columns }
+    }
+
+    suspend fun setAppTrayIconDp(dp: Int) {
+        context.dataStore.edit { prefs -> prefs[KEY_APP_TRAY_ICON_DP] = dp }
+    }
+
+    suspend fun setAppTrayStyle(style: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_APP_TRAY_STYLE] = style }
+    }
+
+    suspend fun setAppTrayAnim(anim: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_APP_TRAY_ANIM] = anim }
     }
 }

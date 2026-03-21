@@ -42,13 +42,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val themeConfig by settingsViewModel.themeConfig.collectAsStateWithLifecycle()
+            val appTrayAnim by settingsViewModel.appTrayAnim.collectAsStateWithLifecycle()
 
             ABLauncherTheme(themeConfig = themeConfig) {
                 val navController = rememberNavController()
 
                 // Derive animation durations from the persisted speed multiplier.
-                // Higher speed → shorter duration. Clamped so animations never
-                // become unrecognisably fast or slow.
                 val slideDuration by remember(themeConfig.animSpeed) {
                     derivedStateOf { (300f / themeConfig.animSpeed).toInt().coerceIn(60, 1200) }
                 }
@@ -66,20 +65,34 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(navController = navController)
                     }
 
-                    // ── App Tray (slides up from bottom) ──────────────────────
+                    // ── App Tray (animation style from settings) ───────────────
                     composable(
                         route = "apptray",
                         enterTransition = {
-                            slideInVertically(
-                                animationSpec = tween(slideDuration),
-                                initialOffsetY = { it }
-                            ) + fadeIn(tween(fadeDuration))
+                            when (appTrayAnim) {
+                                "FADE" -> fadeIn(tween(fadeDuration))
+                                "SCALE" -> scaleIn(
+                                    animationSpec = tween(slideDuration),
+                                    initialScale = 0.85f
+                                ) + fadeIn(tween(fadeDuration))
+                                else -> slideInVertically(
+                                    animationSpec = tween(slideDuration),
+                                    initialOffsetY = { it }
+                                ) + fadeIn(tween(fadeDuration))
+                            }
                         },
                         exitTransition = {
-                            slideOutVertically(
-                                animationSpec = tween(slideDuration),
-                                targetOffsetY = { it }
-                            ) + fadeOut(tween(fadeDuration))
+                            when (appTrayAnim) {
+                                "FADE" -> fadeOut(tween(fadeDuration))
+                                "SCALE" -> scaleOut(
+                                    animationSpec = tween(slideDuration),
+                                    targetScale = 0.85f
+                                ) + fadeOut(tween(fadeDuration))
+                                else -> slideOutVertically(
+                                    animationSpec = tween(slideDuration),
+                                    targetOffsetY = { it }
+                                ) + fadeOut(tween(fadeDuration))
+                            }
                         }
                     ) {
                         AppTrayScreen(navController = navController)

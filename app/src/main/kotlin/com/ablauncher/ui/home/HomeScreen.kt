@@ -1,13 +1,21 @@
 package com.ablauncher.ui.home
 
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -28,11 +36,13 @@ fun HomeScreen(
     val showContextMenu by viewModel.showContextMenu.collectAsStateWithLifecycle()
     val showWidgetPanel by viewModel.showWidgetPanel.collectAsStateWithLifecycle()
     val wallpaperUri by viewModel.wallpaperUri.collectAsStateWithLifecycle()
-    val homeItems by viewModel.homeItems.collectAsStateWithLifecycle()
+    val wallpaperDim by viewModel.wallpaperDim.collectAsStateWithLifecycle()
+    val wallpaperBlur by viewModel.wallpaperBlur.collectAsStateWithLifecycle()
+    val homePagesList by viewModel.homePages.collectAsStateWithLifecycle()
     val selectedItemId by viewModel.selectedItemId.collectAsStateWithLifecycle()
     val customizerItem by viewModel.customizerItem.collectAsStateWithLifecycle()
 
-    // Widget enabled states derived from canvas items
+    // Widget enabled states
     val clockEnabled by viewModel.widgetClockEnabled.collectAsStateWithLifecycle()
     val weatherEnabled by viewModel.widgetWeatherEnabled.collectAsStateWithLifecycle()
     val calendarEnabled by viewModel.widgetCalendarEnabled.collectAsStateWithLifecycle()
@@ -47,6 +57,22 @@ fun HomeScreen(
         val pkg = pendingPkg ?: return@LaunchedEffect
         viewModel.addAppShortcut(pkg)
         savedStateHandle?.remove<String>("add_to_home_pkg")
+    }
+
+    val pageCount = homePagesList.size.coerceAtLeast(1)
+    val pagerState = rememberPagerState(pageCount = { pageCount })
+
+    // Sync pager → viewModel
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.currentPage }.collect { viewModel.setCurrentPage(it) }
+    }
+
+    // Sync viewModel → pager (e.g. when a page is added)
+    val currentPageIdx by viewModel.currentPageIndex.collectAsStateWithLifecycle()
+    LaunchedEffect(currentPageIdx) {
+        if (pagerState.currentPage != currentPageIdx && currentPageIdx < pageCount) {
+            pagerState.animateScrollToPage(currentPageIdx)
+        }
     }
 
     Box(
@@ -66,22 +92,65 @@ fun HomeScreen(
                 model = Uri.parse(wallpaperUri),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (wallpaperBlur > 0f) Modifier.blur(wallpaperBlur * 25.dp)
+                        else Modifier
+                    )
+            )
+        }
+
+        // ── Darkness dim overlay ─────────────────────────────────────────────
+        if (wallpaperDim > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = wallpaperDim))
+            )
+        }
+
+        // ── Multi-page canvas (HorizontalPager) ───────────────────────────────
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = selectedItemId == null,
+            modifier = Modifier.fillMaxSize()
+        ) { pageIdx ->
+            HomeCanvas(
+                items = homePagesList.getOrElse(pageIdx) { emptyList() },
+                selectedItemId = selectedItemId,
+                onSelect = { viewModel.selectItem(it) },
+                onMoved = { id, x, y -> viewModel.moveItem(id, x, y) },
+                onResized = { id, w, h -> viewModel.resizeItem(id, w, h) },
+                onRemove = { viewModel.removeItem(it) },
+                onCustomize = { viewModel.openCustomizer(it) },
+                onUninstall = { viewModel.uninstallApp(it) },
                 modifier = Modifier.fillMaxSize()
             )
         }
 
-        // ── Free-form home canvas ─────────────────────────────────────────────
-        HomeCanvas(
-            items = homeItems,
-            selectedItemId = selectedItemId,
-            onSelect = { viewModel.selectItem(it) },
-            onMoved = { id, x, y -> viewModel.moveItem(id, x, y) },
-            onResized = { id, w, h -> viewModel.resizeItem(id, w, h) },
-            onRemove = { viewModel.removeItem(it) },
-            onCustomize = { viewModel.openCustomizer(it) },
-            onUninstall = { viewModel.uninstallApp(it) },
-            modifier = Modifier.fillMaxSize()
-        )
+        // ── Page indicator dots ───────────────────────────────────────────────
+        if (pageCount > 1) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 90.dp)
+            ) {
+                repeat(pageCount) { i ->
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (i == pagerState.currentPage) 8.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (i == pagerState.currentPage) Color.White
+                                else Color.White.copy(alpha = 0.4f)
+                            )
+                    )
+                }
+            }
+        }
 
         // ── Taskbar at the bottom ─────────────────────────────────────────────
         TaskbarSection(

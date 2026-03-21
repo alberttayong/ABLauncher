@@ -3,6 +3,7 @@ package com.ablauncher.ui.apptray
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -35,11 +37,11 @@ fun AppTrayScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val showAppOptions by viewModel.showAppOptions.collectAsStateWithLifecycle()
     val selectedApp by viewModel.selectedApp.collectAsStateWithLifecycle()
+    val columns by viewModel.appTrayColumns.collectAsStateWithLifecycle()
+    val iconDp by viewModel.appTrayIconDp.collectAsStateWithLifecycle()
+    val appTrayStyle by viewModel.appTrayStyle.collectAsStateWithLifecycle()
 
-    FrostedGlassPanel(
-        modifier = Modifier.fillMaxSize(),
-        cornerRadius = 0.dp
-    ) {
+    val trayContent: @Composable BoxScope.() -> Unit = {
         Column(modifier = Modifier.fillMaxSize()) {
             // ── Header ────────────────────────────────────────────────────────
             Row(
@@ -59,7 +61,9 @@ fun AppTrayScreen(
                     text = stringResource(R.string.app_tray_label),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f).padding(start = 8.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
                 )
             }
 
@@ -72,7 +76,7 @@ fun AppTrayScreen(
 
             // ── App grid ──────────────────────────────────────────────────────
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 80.dp),
+                columns = GridCells.Fixed(columns.coerceIn(2, 8)),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -89,11 +93,31 @@ fun AppTrayScreen(
                         },
                         onLongClick = { viewModel.onAppLongPress(app.packageName) },
                         showLabel = true,
-                        iconSize = 56.dp
+                        iconSize = iconDp.dp
                     )
                 }
             }
         }
+    }
+
+    when (appTrayStyle) {
+        "DARK" -> Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xE5000000)),
+            content = trayContent
+        )
+        "LIGHT" -> Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xE5F5F5FF)),
+            content = trayContent
+        )
+        "TRANSPARENT" -> Box(
+            modifier = Modifier.fillMaxSize(),
+            content = trayContent
+        )
+        else -> FrostedGlassPanel(
+            modifier = Modifier.fillMaxSize(),
+            cornerRadius = 0.dp,
+            content = trayContent
+        )
     }
 
     // ── App options bottom sheet ──────────────────────────────────────────────

@@ -29,11 +29,11 @@ sealed class HomeItem {
 }
 
 enum class WidgetType {
-    CLOCK, WEATHER, CALENDAR, NEWS, SEARCH;
+    CLOCK, WEATHER, CALENDAR, NEWS, SEARCH, MEDIA_PLAYER;
 
     val defaultXFrac: Float
         get() = when (this) {
-            SEARCH, CLOCK, WEATHER -> 0.02f
+            SEARCH, CLOCK, WEATHER, MEDIA_PLAYER -> 0.02f
             CALENDAR, NEWS -> 0.50f
         }
     val defaultYFrac: Float
@@ -43,11 +43,13 @@ enum class WidgetType {
             WEATHER -> 0.55f
             CALENDAR -> 0.05f
             NEWS -> 0.50f
+            MEDIA_PLAYER -> 0.85f
         }
     val defaultWidthFrac: Float
         get() = when (this) {
             SEARCH, CLOCK, WEATHER -> 0.45f
             CALENDAR, NEWS -> 0.46f
+            MEDIA_PLAYER -> 0.55f
         }
     val defaultHeightFrac: Float
         get() = when (this) {
@@ -56,6 +58,7 @@ enum class WidgetType {
             WEATHER -> 0.28f
             CALENDAR -> 0.40f
             NEWS -> 0.44f
+            MEDIA_PLAYER -> 0.10f
         }
 }
 

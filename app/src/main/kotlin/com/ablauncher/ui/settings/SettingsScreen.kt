@@ -1,10 +1,13 @@
 package com.ablauncher.ui.settings
 
 import android.Manifest
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
@@ -12,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,8 +40,10 @@ fun SettingsScreen(
     navController: NavController,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
     val hasUsagePermission by viewModel.hasUsagePermission.collectAsStateWithLifecycle()
+    val hasNotificationPermission by viewModel.hasNotificationListenerPermission.collectAsStateWithLifecycle()
 
     // Widget states
     val clockEnabled by viewModel.widgetClockEnabled.collectAsStateWithLifecycle()
@@ -45,6 +51,7 @@ fun SettingsScreen(
     val calendarEnabled by viewModel.widgetCalendarEnabled.collectAsStateWithLifecycle()
     val newsEnabled by viewModel.widgetNewsEnabled.collectAsStateWithLifecycle()
     val searchEnabled by viewModel.widgetSearchEnabled.collectAsStateWithLifecycle()
+    val mediaPlayerEnabled by viewModel.widgetMediaPlayerEnabled.collectAsStateWithLifecycle()
 
     // Clock / weather settings
     val clockFace by viewModel.clockFace.collectAsStateWithLifecycle()
@@ -53,10 +60,22 @@ fun SettingsScreen(
     val manualCity by viewModel.manualCity.collectAsStateWithLifecycle()
     var cityInput by remember(manualCity) { mutableStateOf(manualCity) }
 
+    // App tray settings
+    val appTrayColumns by viewModel.appTrayColumns.collectAsStateWithLifecycle()
+    val appTrayIconDp by viewModel.appTrayIconDp.collectAsStateWithLifecycle()
+    val appTrayStyle by viewModel.appTrayStyle.collectAsStateWithLifecycle()
+    val appTrayAnim by viewModel.appTrayAnim.collectAsStateWithLifecycle()
+
+    // Home pages
+    val homePageCount by viewModel.homePageCount.collectAsStateWithLifecycle()
+
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
     val calendarPermission = rememberPermissionState(Manifest.permission.READ_CALENDAR)
 
-    LaunchedEffect(Unit) { viewModel.checkUsagePermission() }
+    LaunchedEffect(Unit) {
+        viewModel.checkUsagePermission()
+        viewModel.checkNotificationListenerPermission()
+    }
 
     FrostedGlassPanel(
         modifier = Modifier.fillMaxSize(),
@@ -185,56 +204,40 @@ fun SettingsScreen(
                 // ── Widgets ───────────────────────────────────────────────────
                 item { SectionHeader("Widgets") }
 
-                // Search Bar
                 item {
                     SettingsCard {
-                        WidgetToggleRow(
-                            label = "Search Bar",
-                            enabled = searchEnabled,
-                            onToggle = { viewModel.toggleWidget(WidgetType.SEARCH, it) }
-                        )
+                        WidgetToggleRow("Search Bar", searchEnabled) {
+                            viewModel.toggleWidget(WidgetType.SEARCH, it)
+                        }
                     }
                 }
 
-                // Clock
                 item {
                     SettingsCard {
-                        Column(modifier = Modifier.padding(
-                            bottom = if (clockEnabled) 16.dp else 0.dp)
-                        ) {
-                            WidgetToggleRow(
-                                label = "Clock",
-                                enabled = clockEnabled,
-                                onToggle = { viewModel.toggleWidget(WidgetType.CLOCK, it) }
-                            )
+                        Column(modifier = Modifier.padding(bottom = if (clockEnabled) 16.dp else 0.dp)) {
+                            WidgetToggleRow("Clock", clockEnabled) {
+                                viewModel.toggleWidget(WidgetType.CLOCK, it)
+                            }
                             if (clockEnabled) {
                                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                     SettingSubLabel("Clock Face")
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         ClockFace.entries.forEach { face ->
-                                            FilterChip(
-                                                selected = clockFace == face,
+                                            FilterChip(selected = clockFace == face,
                                                 onClick = { viewModel.setClockFace(face) },
                                                 label = { Text(face.displayName, fontSize = 11.sp) },
-                                                modifier = Modifier.weight(1f)
-                                            )
+                                                modifier = Modifier.weight(1f))
                                         }
                                     }
                                     SettingSubLabel("Time Format")
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         ClockFormat.entries.forEach { fmt ->
-                                            FilterChip(
-                                                selected = clockFormat == fmt,
+                                            FilterChip(selected = clockFormat == fmt,
                                                 onClick = { viewModel.setClockFormat(fmt) },
                                                 label = { Text(fmt.displayName, fontSize = 12.sp) },
-                                                modifier = Modifier.weight(1f)
-                                            )
+                                                modifier = Modifier.weight(1f))
                                         }
                                     }
                                 }
@@ -243,38 +246,28 @@ fun SettingsScreen(
                     }
                 }
 
-                // Weather
                 item {
                     SettingsCard {
-                        Column(modifier = Modifier.padding(
-                            bottom = if (weatherEnabled) 16.dp else 0.dp)
-                        ) {
-                            WidgetToggleRow(
-                                label = "Weather",
-                                enabled = weatherEnabled,
-                                onToggle = { viewModel.toggleWidget(WidgetType.WEATHER, it) }
-                            )
+                        Column(modifier = Modifier.padding(bottom = if (weatherEnabled) 16.dp else 0.dp)) {
+                            WidgetToggleRow("Weather", weatherEnabled) {
+                                viewModel.toggleWidget(WidgetType.WEATHER, it)
+                            }
                             if (weatherEnabled) {
                                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                     if (!locationPermission.status.isGranted) {
-                                        PermissionRow(
-                                            text = "Grant location permission for auto-detect weather",
-                                            onRequest = { locationPermission.launchPermissionRequest() }
-                                        )
+                                        PermissionRow("Grant location for auto-detect weather") {
+                                            locationPermission.launchPermissionRequest()
+                                        }
                                     }
                                     SettingSubLabel("Temperature Unit")
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         listOf("CELSIUS" to "Celsius", "FAHRENHEIT" to "Fahrenheit")
                                             .forEach { (key, label) ->
-                                                FilterChip(
-                                                    selected = weatherUnit == key,
+                                                FilterChip(selected = weatherUnit == key,
                                                     onClick = { viewModel.setWeatherUnit(key) },
                                                     label = { Text(label, fontSize = 12.sp) },
-                                                    modifier = Modifier.weight(1f)
-                                                )
+                                                    modifier = Modifier.weight(1f))
                                             }
                                     }
                                     SettingSubLabel("Manual City (overrides GPS)")
@@ -286,9 +279,9 @@ fun SettingsScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         trailingIcon = {
                                             if (cityInput != manualCity) {
-                                                TextButton(
-                                                    onClick = { viewModel.setManualCity(cityInput.trim()) }
-                                                ) { Text("Save") }
+                                                TextButton(onClick = { viewModel.setManualCity(cityInput.trim()) }) {
+                                                    Text("Save")
+                                                }
                                             }
                                         }
                                     )
@@ -299,37 +292,182 @@ fun SettingsScreen(
                     }
                 }
 
-                // Calendar
                 item {
                     SettingsCard {
                         Column(modifier = Modifier.padding(
-                            bottom = if (calendarEnabled && !calendarPermission.status.isGranted) 16.dp else 0.dp)
-                        ) {
-                            WidgetToggleRow(
-                                label = "Calendar",
-                                enabled = calendarEnabled,
-                                onToggle = { viewModel.toggleWidget(WidgetType.CALENDAR, it) }
-                            )
+                            bottom = if (calendarEnabled && !calendarPermission.status.isGranted) 16.dp else 0.dp)) {
+                            WidgetToggleRow("Calendar", calendarEnabled) {
+                                viewModel.toggleWidget(WidgetType.CALENDAR, it)
+                            }
                             if (calendarEnabled && !calendarPermission.status.isGranted) {
                                 Box(Modifier.padding(horizontal = 16.dp)) {
-                                    PermissionRow(
-                                        text = "Grant calendar permission to show events",
-                                        onRequest = { calendarPermission.launchPermissionRequest() }
-                                    )
+                                    PermissionRow("Grant calendar permission to show events") {
+                                        calendarPermission.launchPermissionRequest()
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // News
                 item {
                     SettingsCard {
-                        WidgetToggleRow(
-                            label = "Google News",
-                            enabled = newsEnabled,
-                            onToggle = { viewModel.toggleWidget(WidgetType.NEWS, it) }
-                        )
+                        WidgetToggleRow("Google News", newsEnabled) {
+                            viewModel.toggleWidget(WidgetType.NEWS, it)
+                        }
+                    }
+                }
+
+                item {
+                    SettingsCard {
+                        Column(modifier = Modifier.padding(
+                            bottom = if (mediaPlayerEnabled && !hasNotificationPermission) 16.dp else 0.dp)) {
+                            WidgetToggleRow("Media Player", mediaPlayerEnabled) {
+                                viewModel.toggleWidget(WidgetType.MEDIA_PLAYER, it)
+                            }
+                            if (mediaPlayerEnabled && !hasNotificationPermission) {
+                                Box(Modifier.padding(horizontal = 16.dp)) {
+                                    PermissionRow("Grant Notification Access for media controls") {
+                                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── App Tray ──────────────────────────────────────────────────
+                item { SectionHeader("App Tray") }
+
+                item {
+                    SettingsCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Background Style", style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf("FROSTED" to "Frosted", "DARK" to "Dark",
+                                       "LIGHT" to "Light", "TRANSPARENT" to "Clear")
+                                    .forEach { (key, label) ->
+                                        FilterChip(selected = appTrayStyle == key,
+                                            onClick = { viewModel.setAppTrayStyle(key) },
+                                            label = { Text(label, fontSize = 11.sp) },
+                                            modifier = Modifier.weight(1f))
+                                    }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    SettingsCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Grid Columns", style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(3, 4, 5, 6).forEach { col ->
+                                    FilterChip(selected = appTrayColumns == col,
+                                        onClick = { viewModel.setAppTrayColumns(col) },
+                                        label = { Text("$col") },
+                                        modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    SettingsCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Icon Size", style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(40 to "Compact", 56 to "Normal", 72 to "Large").forEach { (dp, label) ->
+                                    FilterChip(selected = appTrayIconDp == dp,
+                                        onClick = { viewModel.setAppTrayIconDp(dp) },
+                                        label = { Text(label, fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    SettingsCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Enter Animation", style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("SLIDE_UP" to "Slide", "FADE" to "Fade", "SCALE" to "Scale")
+                                    .forEach { (key, label) ->
+                                        FilterChip(selected = appTrayAnim == key,
+                                            onClick = { viewModel.setAppTrayAnim(key) },
+                                            label = { Text(label, fontSize = 12.sp) },
+                                            modifier = Modifier.weight(1f))
+                                    }
+                            }
+                        }
+                    }
+                }
+
+                // ── Home Pages ────────────────────────────────────────────────
+                item { SectionHeader("Home Pages") }
+
+                item {
+                    SettingsCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Pages", style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface)
+                                Text("$homePageCount",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            repeat(homePageCount) { idx ->
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 2.dp)
+                                ) {
+                                    Text("Page ${idx + 1}",
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp)
+                                    if (homePageCount > 1) {
+                                        TextButton(onClick = { viewModel.removePage(idx) }) {
+                                            Text("Remove",
+                                                color = MaterialTheme.colorScheme.error,
+                                                fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.addPage() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Add Page")
+                            }
+                        }
                     }
                 }
 
@@ -340,9 +478,7 @@ fun SettingsScreen(
                     SettingsCard {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
+                            modifier = Modifier.fillMaxWidth().padding(16.dp)
                         ) {
                             Icon(
                                 imageVector = if (hasUsagePermission) Icons.Default.CheckCircle
@@ -354,16 +490,12 @@ fun SettingsScreen(
                             )
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    stringResource(R.string.usage_access_title),
+                                Text(stringResource(R.string.usage_access_title),
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    stringResource(R.string.usage_access_desc),
+                                    color = MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(R.string.usage_access_desc),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             if (!hasUsagePermission) {
                                 Spacer(Modifier.width(8.dp))
@@ -382,20 +514,14 @@ fun SettingsScreen(
                     SettingsCard {
                         Row(
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
+                            modifier = Modifier.fillMaxWidth().padding(16.dp)
                         ) {
-                            Text(
-                                stringResource(R.string.version_label),
+                            Text(stringResource(R.string.version_label),
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                BuildConfig.VERSION_NAME,
+                                color = MaterialTheme.colorScheme.onSurface)
+                            Text(BuildConfig.VERSION_NAME,
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -465,15 +591,9 @@ private fun SliderRow(
 }
 
 @Composable
-private fun WidgetToggleRow(
-    label: String,
-    enabled: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
+private fun WidgetToggleRow(label: String, enabled: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -485,20 +605,13 @@ private fun WidgetToggleRow(
 @Composable
 private fun PermissionRow(text: String, onRequest: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = text,
-            fontSize = 12.sp,
+        Text(text = text, fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-            modifier = Modifier.weight(1f)
-        )
-        TextButton(onClick = onRequest) {
-            Text("Allow", fontSize = 12.sp)
-        }
+            modifier = Modifier.weight(1f))
+        TextButton(onClick = onRequest) { Text("Allow", fontSize = 12.sp) }
     }
 }
