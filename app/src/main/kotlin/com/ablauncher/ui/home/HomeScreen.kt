@@ -1,6 +1,7 @@
 package com.ablauncher.ui.home
 
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -27,6 +28,7 @@ import com.ablauncher.ui.home.canvas.IconCustomizerSheet
 import com.ablauncher.ui.taskbar.TaskbarSection
 import com.ablauncher.ui.widgets.WidgetPanelSheet
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -95,7 +97,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(
-                        if (wallpaperBlur > 0f) Modifier.blur(wallpaperBlur * 25.dp)
+                        if (wallpaperBlur > 0f) Modifier.blur((wallpaperBlur * 25).dp)
                         else Modifier
                     )
             )
