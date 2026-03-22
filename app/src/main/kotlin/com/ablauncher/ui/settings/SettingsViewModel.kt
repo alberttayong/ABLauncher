@@ -66,6 +66,17 @@ class SettingsViewModel @Inject constructor(
         .map { it.any { item -> item is HomeItem.Widget && item.widgetType == WidgetType.MEDIA_PLAYER } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    /** Maps each active WidgetType to the page index it lives on. */
+    val widgetPageIndices: StateFlow<Map<WidgetType, Int>> = homeItemRepository.homePages
+        .map { pages ->
+            buildMap {
+                pages.forEachIndexed { idx, page ->
+                    page.filterIsInstance<HomeItem.Widget>().forEach { put(it.widgetType, idx) }
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     // ── Clock settings ────────────────────────────────────────────────────────
     val clockFace: StateFlow<ClockFace> = prefsDataStore.clockFace
         .map { runCatching { ClockFace.valueOf(it) }.getOrDefault(ClockFace.DIGITAL_FULL) }
@@ -204,6 +215,23 @@ class SettingsViewModel @Inject constructor(
 
     fun setAppTrayAnim(anim: String) {
         viewModelScope.launch { prefsDataStore.setAppTrayAnim(anim) }
+    }
+
+    fun moveWidgetToPage(type: WidgetType, targetPageIdx: Int) {
+        viewModelScope.launch {
+            val pages = homeItemRepository.homePages.first().toMutableList()
+            var widget: HomeItem.Widget? = null
+            val stripped = pages.map { page ->
+                val found = page.filterIsInstance<HomeItem.Widget>().firstOrNull { it.widgetType == type }
+                if (found != null) widget = found
+                page.filter { !(it is HomeItem.Widget && it.widgetType == type) }
+            }.toMutableList()
+            val w = widget ?: return@launch
+            if (targetPageIdx in stripped.indices) {
+                stripped[targetPageIdx] = stripped[targetPageIdx] + w
+                homeItemRepository.savePages(stripped)
+            }
+        }
     }
 
     // ── Home pages ────────────────────────────────────────────────────────────

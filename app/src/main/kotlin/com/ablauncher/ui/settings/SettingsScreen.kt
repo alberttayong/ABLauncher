@@ -3,6 +3,8 @@ package com.ablauncher.ui.settings
 import android.Manifest
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,6 +56,7 @@ fun SettingsScreen(
     val newsEnabled by viewModel.widgetNewsEnabled.collectAsStateWithLifecycle()
     val searchEnabled by viewModel.widgetSearchEnabled.collectAsStateWithLifecycle()
     val mediaPlayerEnabled by viewModel.widgetMediaPlayerEnabled.collectAsStateWithLifecycle()
+    val widgetPageIndices by viewModel.widgetPageIndices.collectAsStateWithLifecycle()
 
     // Clock / weather settings
     val clockFace by viewModel.clockFace.collectAsStateWithLifecycle()
@@ -105,234 +110,239 @@ fun SettingsScreen(
             ) {
 
                 // ── Appearance ────────────────────────────────────────────────
-                item { SectionHeader("Appearance") }
-
                 item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Theme", style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(Modifier.height(12.dp))
-                            val themeLabels = mapOf(
-                                AppTheme.GLASS to stringResource(R.string.theme_glass),
-                                AppTheme.DARK to stringResource(R.string.theme_dark),
-                                AppTheme.NEON to stringResource(R.string.theme_neon),
-                                AppTheme.LIGHT to stringResource(R.string.theme_light),
-                                AppTheme.AMOLED to stringResource(R.string.theme_amoled)
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                AppTheme.entries.forEach { theme ->
-                                    FilterChip(
-                                        selected = themeConfig.appTheme == theme,
-                                        onClick = { viewModel.setTheme(theme) },
-                                        label = {
-                                            Text(themeLabels[theme] ?: theme.name,
-                                                style = MaterialTheme.typography.labelMedium)
-                                        }
-                                    )
-                                }
+                    ExpandableSection("Appearance") {
+                        // Theme
+                        val themeLabels = mapOf(
+                            AppTheme.GLASS to stringResource(R.string.theme_glass),
+                            AppTheme.DARK to stringResource(R.string.theme_dark),
+                            AppTheme.NEON to stringResource(R.string.theme_neon),
+                            AppTheme.LIGHT to stringResource(R.string.theme_light),
+                            AppTheme.AMOLED to stringResource(R.string.theme_amoled)
+                        )
+                        SettingSubLabel("Theme")
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            AppTheme.entries.forEach { theme ->
+                                FilterChip(
+                                    selected = themeConfig.appTheme == theme,
+                                    onClick = { viewModel.setTheme(theme) },
+                                    label = {
+                                        Text(themeLabels[theme] ?: theme.name,
+                                            style = MaterialTheme.typography.labelMedium)
+                                    }
+                                )
                             }
                         }
-                    }
-                }
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            SliderRow(
-                                label = stringResource(R.string.blur_radius_label),
-                                valueText = "${themeConfig.blurRadius.toInt()}",
-                                value = themeConfig.blurRadius,
-                                onValueChange = { viewModel.setBlurRadius(it) },
-                                valueRange = 0f..40f
-                            )
-                        }
-                    }
-                }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            SliderRow(
-                                label = stringResource(R.string.panel_opacity_label),
-                                valueText = "${(themeConfig.panelAlpha * 100).toInt()}%",
-                                value = themeConfig.panelAlpha,
-                                onValueChange = { viewModel.setPanelAlpha(it) },
-                                valueRange = 0.1f..0.9f
-                            )
-                        }
+                        SliderRow(
+                            label = stringResource(R.string.blur_radius_label),
+                            valueText = "${themeConfig.blurRadius.toInt()}",
+                            value = themeConfig.blurRadius,
+                            onValueChange = { viewModel.setBlurRadius(it) },
+                            valueRange = 0f..40f
+                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        SliderRow(
+                            label = stringResource(R.string.panel_opacity_label),
+                            valueText = "${(themeConfig.panelAlpha * 100).toInt()}%",
+                            value = themeConfig.panelAlpha,
+                            onValueChange = { viewModel.setPanelAlpha(it) },
+                            valueRange = 0.1f..0.9f
+                        )
                     }
                 }
 
                 // ── Animations ────────────────────────────────────────────────
-                item { SectionHeader("Animations") }
-
                 item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            val speedLabel = when {
-                                themeConfig.animSpeed <= 0.4f -> "Very Slow"
-                                themeConfig.animSpeed <= 0.75f -> "Slow"
-                                themeConfig.animSpeed <= 1.25f -> "Normal"
-                                themeConfig.animSpeed <= 1.75f -> "Fast"
-                                else -> "Very Fast"
-                            }
-                            SliderRow(
-                                label = "Transition Speed",
-                                valueText = "${"%.1f".format(themeConfig.animSpeed)}× ($speedLabel)",
-                                value = themeConfig.animSpeed,
-                                onValueChange = { viewModel.setAnimSpeed(it) },
-                                valueRange = 0.25f..3.0f
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("Slower", fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
-                                Text("Faster", fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
-                            }
+                    ExpandableSection("Animations") {
+                        val speedLabel = when {
+                            themeConfig.animSpeed <= 0.4f -> "Very Slow"
+                            themeConfig.animSpeed <= 0.75f -> "Slow"
+                            themeConfig.animSpeed <= 1.25f -> "Normal"
+                            themeConfig.animSpeed <= 1.75f -> "Fast"
+                            else -> "Very Fast"
+                        }
+                        SliderRow(
+                            label = "Transition Speed",
+                            valueText = "${"%.1f".format(themeConfig.animSpeed)}× ($speedLabel)",
+                            value = themeConfig.animSpeed,
+                            onValueChange = { viewModel.setAnimSpeed(it) },
+                            valueRange = 0.25f..3.0f
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Slower", fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
+                            Text("Faster", fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
                         }
                     }
                 }
 
                 // ── Widgets ───────────────────────────────────────────────────
-                item { SectionHeader("Widgets") }
-
                 item {
-                    SettingsCard {
+                    ExpandableSection("Widgets") {
+                        // Search Bar
                         WidgetToggleRow("Search Bar", searchEnabled) {
                             viewModel.toggleWidget(WidgetType.SEARCH, it)
                         }
-                    }
-                }
+                        if (searchEnabled && homePageCount > 1) {
+                            WidgetPagePicker(
+                                currentPage = widgetPageIndices[WidgetType.SEARCH] ?: 0,
+                                pageCount = homePageCount,
+                                onPageSelected = { viewModel.moveWidgetToPage(WidgetType.SEARCH, it) }
+                            )
+                        }
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(bottom = if (clockEnabled) 16.dp else 0.dp)) {
-                            WidgetToggleRow("Clock", clockEnabled) {
-                                viewModel.toggleWidget(WidgetType.CLOCK, it)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Clock
+                        WidgetToggleRow("Clock", clockEnabled) {
+                            viewModel.toggleWidget(WidgetType.CLOCK, it)
+                        }
+                        if (clockEnabled) {
+                            if (homePageCount > 1) {
+                                WidgetPagePicker(
+                                    currentPage = widgetPageIndices[WidgetType.CLOCK] ?: 0,
+                                    pageCount = homePageCount,
+                                    onPageSelected = { viewModel.moveWidgetToPage(WidgetType.CLOCK, it) }
+                                )
                             }
-                            if (clockEnabled) {
-                                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    SettingSubLabel("Clock Face")
-                                    Row(modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        ClockFace.entries.forEach { face ->
-                                            FilterChip(selected = clockFace == face,
-                                                onClick = { viewModel.setClockFace(face) },
-                                                label = { Text(face.displayName, fontSize = 11.sp) },
-                                                modifier = Modifier.weight(1f))
-                                        }
-                                    }
-                                    SettingSubLabel("Time Format")
-                                    Row(modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        ClockFormat.entries.forEach { fmt ->
-                                            FilterChip(selected = clockFormat == fmt,
-                                                onClick = { viewModel.setClockFormat(fmt) },
-                                                label = { Text(fmt.displayName, fontSize = 12.sp) },
-                                                modifier = Modifier.weight(1f))
-                                        }
-                                    }
+                            SettingSubLabel("Clock Face")
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                ClockFace.entries.forEach { face ->
+                                    FilterChip(selected = clockFace == face,
+                                        onClick = { viewModel.setClockFace(face) },
+                                        label = { Text(face.displayName, fontSize = 11.sp) },
+                                        modifier = Modifier.weight(1f))
+                                }
+                            }
+                            SettingSubLabel("Time Format")
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ClockFormat.entries.forEach { fmt ->
+                                    FilterChip(selected = clockFormat == fmt,
+                                        onClick = { viewModel.setClockFormat(fmt) },
+                                        label = { Text(fmt.displayName, fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f))
                                 }
                             }
                         }
-                    }
-                }
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(bottom = if (weatherEnabled) 16.dp else 0.dp)) {
-                            WidgetToggleRow("Weather", weatherEnabled) {
-                                viewModel.toggleWidget(WidgetType.WEATHER, it)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Weather
+                        WidgetToggleRow("Weather", weatherEnabled) {
+                            viewModel.toggleWidget(WidgetType.WEATHER, it)
+                        }
+                        if (weatherEnabled) {
+                            if (homePageCount > 1) {
+                                WidgetPagePicker(
+                                    currentPage = widgetPageIndices[WidgetType.WEATHER] ?: 0,
+                                    pageCount = homePageCount,
+                                    onPageSelected = { viewModel.moveWidgetToPage(WidgetType.WEATHER, it) }
+                                )
                             }
-                            if (weatherEnabled) {
-                                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                                    if (!locationPermission.status.isGranted) {
-                                        PermissionRow("Grant location for auto-detect weather") {
-                                            locationPermission.launchPermissionRequest()
+                            if (!locationPermission.status.isGranted) {
+                                PermissionRow("Grant location for auto-detect weather") {
+                                    locationPermission.launchPermissionRequest()
+                                }
+                            }
+                            SettingSubLabel("Temperature Unit")
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf("CELSIUS" to "Celsius", "FAHRENHEIT" to "Fahrenheit")
+                                    .forEach { (key, label) ->
+                                        FilterChip(selected = weatherUnit == key,
+                                            onClick = { viewModel.setWeatherUnit(key) },
+                                            label = { Text(label, fontSize = 12.sp) },
+                                            modifier = Modifier.weight(1f))
+                                    }
+                            }
+                            SettingSubLabel("Manual City (overrides GPS)")
+                            OutlinedTextField(
+                                value = cityInput,
+                                onValueChange = { cityInput = it },
+                                placeholder = { Text("e.g. London, Tokyo…") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                trailingIcon = {
+                                    if (cityInput != manualCity) {
+                                        TextButton(onClick = { viewModel.setManualCity(cityInput.trim()) }) {
+                                            Text("Save")
                                         }
                                     }
-                                    SettingSubLabel("Temperature Unit")
-                                    Row(modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        listOf("CELSIUS" to "Celsius", "FAHRENHEIT" to "Fahrenheit")
-                                            .forEach { (key, label) ->
-                                                FilterChip(selected = weatherUnit == key,
-                                                    onClick = { viewModel.setWeatherUnit(key) },
-                                                    label = { Text(label, fontSize = 12.sp) },
-                                                    modifier = Modifier.weight(1f))
-                                            }
-                                    }
-                                    SettingSubLabel("Manual City (overrides GPS)")
-                                    OutlinedTextField(
-                                        value = cityInput,
-                                        onValueChange = { cityInput = it },
-                                        placeholder = { Text("e.g. London, Tokyo…") },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        trailingIcon = {
-                                            if (cityInput != manualCity) {
-                                                TextButton(onClick = { viewModel.setManualCity(cityInput.trim()) }) {
-                                                    Text("Save")
-                                                }
-                                            }
-                                        }
-                                    )
-                                    Spacer(Modifier.height(4.dp))
+                                }
+                            )
+                            Spacer(Modifier.height(4.dp))
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Calendar
+                        WidgetToggleRow("Calendar", calendarEnabled) {
+                            viewModel.toggleWidget(WidgetType.CALENDAR, it)
+                        }
+                        if (calendarEnabled) {
+                            if (homePageCount > 1) {
+                                WidgetPagePicker(
+                                    currentPage = widgetPageIndices[WidgetType.CALENDAR] ?: 0,
+                                    pageCount = homePageCount,
+                                    onPageSelected = { viewModel.moveWidgetToPage(WidgetType.CALENDAR, it) }
+                                )
+                            }
+                            if (!calendarPermission.status.isGranted) {
+                                PermissionRow("Grant calendar permission to show events") {
+                                    calendarPermission.launchPermissionRequest()
                                 }
                             }
                         }
-                    }
-                }
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(
-                            bottom = if (calendarEnabled && !calendarPermission.status.isGranted) 16.dp else 0.dp)) {
-                            WidgetToggleRow("Calendar", calendarEnabled) {
-                                viewModel.toggleWidget(WidgetType.CALENDAR, it)
-                            }
-                            if (calendarEnabled && !calendarPermission.status.isGranted) {
-                                Box(Modifier.padding(horizontal = 16.dp)) {
-                                    PermissionRow("Grant calendar permission to show events") {
-                                        calendarPermission.launchPermissionRequest()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-                item {
-                    SettingsCard {
+                        // Google News
                         WidgetToggleRow("Google News", newsEnabled) {
                             viewModel.toggleWidget(WidgetType.NEWS, it)
                         }
-                    }
-                }
+                        if (newsEnabled && homePageCount > 1) {
+                            WidgetPagePicker(
+                                currentPage = widgetPageIndices[WidgetType.NEWS] ?: 0,
+                                pageCount = homePageCount,
+                                onPageSelected = { viewModel.moveWidgetToPage(WidgetType.NEWS, it) }
+                            )
+                        }
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(
-                            bottom = if (mediaPlayerEnabled && !hasNotificationPermission) 16.dp else 0.dp)) {
-                            WidgetToggleRow("Media Player", mediaPlayerEnabled) {
-                                viewModel.toggleWidget(WidgetType.MEDIA_PLAYER, it)
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                        // Media Player
+                        WidgetToggleRow("Media Player", mediaPlayerEnabled) {
+                            viewModel.toggleWidget(WidgetType.MEDIA_PLAYER, it)
+                        }
+                        if (mediaPlayerEnabled) {
+                            if (homePageCount > 1) {
+                                WidgetPagePicker(
+                                    currentPage = widgetPageIndices[WidgetType.MEDIA_PLAYER] ?: 0,
+                                    pageCount = homePageCount,
+                                    onPageSelected = { viewModel.moveWidgetToPage(WidgetType.MEDIA_PLAYER, it) }
+                                )
                             }
-                            if (mediaPlayerEnabled && !hasNotificationPermission) {
-                                Box(Modifier.padding(horizontal = 16.dp)) {
-                                    PermissionRow("Grant Notification Access for media controls") {
-                                        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        context.startActivity(intent)
+                            if (!hasNotificationPermission) {
+                                PermissionRow("Grant Notification Access for media controls") {
+                                    val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     }
+                                    context.startActivity(intent)
                                 }
                             }
                         }
@@ -340,83 +350,59 @@ fun SettingsScreen(
                 }
 
                 // ── App Tray ──────────────────────────────────────────────────
-                item { SectionHeader("App Tray") }
-
                 item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Background Style", style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                listOf("FROSTED" to "Frosted", "DARK" to "Dark",
-                                       "LIGHT" to "Light", "TRANSPARENT" to "Clear")
-                                    .forEach { (key, label) ->
-                                        FilterChip(selected = appTrayStyle == key,
-                                            onClick = { viewModel.setAppTrayStyle(key) },
-                                            label = { Text(label, fontSize = 11.sp) },
-                                            modifier = Modifier.weight(1f))
-                                    }
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Grid Columns", style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(3, 4, 5, 6).forEach { col ->
-                                    FilterChip(selected = appTrayColumns == col,
-                                        onClick = { viewModel.setAppTrayColumns(col) },
-                                        label = { Text("$col") },
+                    ExpandableSection("App Tray") {
+                        SettingSubLabel("Background Style")
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("FROSTED" to "Frosted", "DARK" to "Dark",
+                                   "LIGHT" to "Light", "TRANSPARENT" to "Clear")
+                                .forEach { (key, label) ->
+                                    FilterChip(selected = appTrayStyle == key,
+                                        onClick = { viewModel.setAppTrayStyle(key) },
+                                        label = { Text(label, fontSize = 11.sp) },
                                         modifier = Modifier.weight(1f))
                                 }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        SettingSubLabel("Grid Columns")
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(3, 4, 5, 6).forEach { col ->
+                                FilterChip(selected = appTrayColumns == col,
+                                    onClick = { viewModel.setAppTrayColumns(col) },
+                                    label = { Text("$col") },
+                                    modifier = Modifier.weight(1f))
                             }
                         }
-                    }
-                }
 
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Icon Size", style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf(40 to "Compact", 56 to "Normal", 72 to "Large").forEach { (dp, label) ->
-                                    FilterChip(selected = appTrayIconDp == dp,
-                                        onClick = { viewModel.setAppTrayIconDp(dp) },
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        SettingSubLabel("Icon Size")
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(40 to "Compact", 56 to "Normal", 72 to "Large").forEach { (dp, label) ->
+                                FilterChip(selected = appTrayIconDp == dp,
+                                    onClick = { viewModel.setAppTrayIconDp(dp) },
+                                    label = { Text(label, fontSize = 12.sp) },
+                                    modifier = Modifier.weight(1f))
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        SettingSubLabel("Enter Animation")
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("SLIDE_UP" to "Slide", "FADE" to "Fade", "SCALE" to "Scale")
+                                .forEach { (key, label) ->
+                                    FilterChip(selected = appTrayAnim == key,
+                                        onClick = { viewModel.setAppTrayAnim(key) },
                                         label = { Text(label, fontSize = 12.sp) },
                                         modifier = Modifier.weight(1f))
                                 }
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    SettingsCard {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Enter Animation", style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("SLIDE_UP" to "Slide", "FADE" to "Fade", "SCALE" to "Scale")
-                                    .forEach { (key, label) ->
-                                        FilterChip(selected = appTrayAnim == key,
-                                            onClick = { viewModel.setAppTrayAnim(key) },
-                                            label = { Text(label, fontSize = 12.sp) },
-                                            modifier = Modifier.weight(1f))
-                                    }
-                            }
                         }
                     }
                 }
@@ -535,6 +521,77 @@ fun SettingsScreen(
 // ── Private helpers ────────────────────────────────────────────────────────────
 
 @Composable
+private fun ExpandableSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp
+                                  else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    content = content
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WidgetPagePicker(
+    currentPage: Int,
+    pageCount: Int,
+    onPageSelected: (Int) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp)
+    ) {
+        Text(
+            text = "Page:",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(pageCount) { idx ->
+                FilterChip(
+                    selected = currentPage == idx,
+                    onClick = { onPageSelected(idx) },
+                    label = { Text("${idx + 1}", fontSize = 11.sp) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SectionHeader(title: String) {
     Text(
         text = title,
@@ -593,7 +650,7 @@ private fun SliderRow(
 @Composable
 private fun WidgetToggleRow(label: String, enabled: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
