@@ -8,6 +8,7 @@ import com.ablauncher.data.datastore.PreferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,10 +29,13 @@ class WallpaperRepository @Inject constructor(
         prefsDataStore.setWallpaperUri(uri.toString())
     }
 
-    /** Set wallpaper from a Bitmap (for built-in wallpapers loaded from resources) */
+    /** Set wallpaper from a Bitmap (for built-in gradient wallpapers).
+     *  Saves to internal storage so HomeScreen can display it via wallpaperUri. */
     suspend fun setWallpaperFromBitmap(bitmap: Bitmap) = withContext(Dispatchers.IO) {
-        wallpaperManager.setBitmap(bitmap)
-        prefsDataStore.setWallpaperUri(null)
+        val file = File(context.filesDir, "gradient_wallpaper.jpg")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        prefsDataStore.setWallpaperUri(Uri.fromFile(file).toString())
+        runCatching { wallpaperManager.setBitmap(bitmap) }
     }
 
     /** Clear custom wallpaper selection (revert to DataStore null) */

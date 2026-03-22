@@ -56,6 +56,8 @@ class PreferencesDataStore @Inject constructor(
         val KEY_APP_TRAY_ICON_DP = intPreferencesKey("app_tray_icon_dp")  // 40/56/72
         val KEY_APP_TRAY_STYLE = stringPreferencesKey("app_tray_style")   // FROSTED/DARK/LIGHT/TRANSPARENT
         val KEY_APP_TRAY_ANIM = stringPreferencesKey("app_tray_anim")     // SLIDE_UP/FADE/SCALE
+        // Screen saver
+        val KEY_SCREENSAVER_STYLE = stringPreferencesKey("screensaver_style") // CLOCK/GRADIENT/COLORS
     }
 
     val themeConfig: Flow<ThemeConfig> = context.dataStore.data
@@ -247,5 +249,14 @@ class PreferencesDataStore @Inject constructor(
 
     suspend fun setAppTrayAnim(anim: String) {
         context.dataStore.edit { prefs -> prefs[KEY_APP_TRAY_ANIM] = anim }
+    }
+
+    // ── Screen saver ──────────────────────────────────────────────────────────
+    val screensaverStyle: Flow<String> = context.dataStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { prefs -> prefs[KEY_SCREENSAVER_STYLE] ?: "CLOCK" }
+
+    suspend fun setScreensaverStyle(style: String) {
+        context.dataStore.edit { prefs -> prefs[KEY_SCREENSAVER_STYLE] = style }
     }
 }

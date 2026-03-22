@@ -39,6 +39,9 @@ class WallpaperViewModel @Inject constructor(
     val wallpaperBlur: StateFlow<Float> = prefsDataStore.wallpaperBlur
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0f)
 
+    val screensaverStyle: StateFlow<String> = prefsDataStore.screensaverStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "CLOCK")
+
     fun applyWallpaperFromUri(uri: Uri) {
         viewModelScope.launch {
             _isApplying.value = true
@@ -100,6 +103,10 @@ class WallpaperViewModel @Inject constructor(
 
     fun setWallpaperBlur(blur: Float) {
         viewModelScope.launch { prefsDataStore.setWallpaperBlur(blur) }
+    }
+
+    fun setScreensaverStyle(style: String) {
+        viewModelScope.launch { prefsDataStore.setScreensaverStyle(style) }
     }
 
     fun clearMessage() {
