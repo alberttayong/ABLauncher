@@ -74,6 +74,9 @@ fun SettingsScreen(
     // Home pages
     val homePageCount by viewModel.homePageCount.collectAsStateWithLifecycle()
 
+    // Display
+    val screensaverStyle by viewModel.screensaverStyle.collectAsStateWithLifecycle()
+
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
     val calendarPermission = rememberPermissionState(Manifest.permission.READ_CALENDAR)
 
@@ -108,6 +111,67 @@ fun SettingsScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+
+                // ── Display ───────────────────────────────────────────────────
+                item {
+                    ExpandableSection("Display") {
+                        // Wallpaper
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigate("wallpaper") }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Wallpaper", fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurface)
+                                Text("Change →", fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // Screen saver style
+                        SettingSubLabel("Screen Saver Style")
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(
+                                "CLOCK"    to "Clock — drifting time & date",
+                                "GRADIENT" to "Gradient — slow colour cycle",
+                                "COLORS"   to "Colors — hue sweep"
+                            ).forEach { (id, label) ->
+                                val selected = screensaverStyle == id
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.setScreensaverStyle(id) }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = selected,
+                                            onClick = { viewModel.setScreensaverStyle(id) }
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(label, fontSize = 14.sp,
+                                            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                                    else MaterialTheme.colorScheme.onSurface)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // ── Appearance ────────────────────────────────────────────────
                 item {

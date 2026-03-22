@@ -106,6 +106,14 @@ class SettingsViewModel @Inject constructor(
     val appTrayAnim: StateFlow<String> = prefsDataStore.appTrayAnim
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "SLIDE_UP")
 
+    // ── Screen saver ─────────────────────────────────────────────────────────
+    val screensaverStyle: StateFlow<String> = prefsDataStore.screensaverStyle
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "CLOCK")
+
+    fun setScreensaverStyle(style: String) {
+        viewModelScope.launch { prefsDataStore.setScreensaverStyle(style) }
+    }
+
     // ── Home pages ────────────────────────────────────────────────────────────
     val homePageCount: StateFlow<Int> = homeItemRepository.homePages
         .map { it.size.coerceAtLeast(1) }
